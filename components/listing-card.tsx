@@ -1,22 +1,29 @@
 import Image from "next/image"
-import Link from "next/link" // Pour rendre la carte cliquable vers la page de l'annonce
+import Link from "next/link"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MapPin, CalendarDays } from "lucide-react"
 import type { Listing } from "@/lib/data"
 
 export default function ListingCard({ listing }: { listing: Listing }) {
+  // Fallback image en cas d'image manquante
+  const fallbackImage = "/placeholder.svg?width=400&height=250&text=Loka"
+  const imageSrc = listing.imageUrl?.startsWith("http")
+    ? listing.imageUrl
+    : listing.imageUrl
+    ? `http://localhost:4000${listing.imageUrl}`
+    : fallbackImage
+
   return (
     <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg flex flex-col h-full bg-card">
       <Link href={`/annonce/${listing.id}`} passHref legacyBehavior>
         <a className="block group">
-          {" "}
-          {/* No nested <a> here */}
           <div className="relative w-full aspect-[16/10] bg-muted">
             <Image
-              src={listing.imageUrl || "/placeholder.svg?width=400&height=250&text=Loka"}
+              src={imageSrc}
               alt={listing.title}
               fill
+              unoptimized // 👈 corrige l’erreur Next.js en désactivant l’optimiseur
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
             {listing.isFeatured && (

@@ -6,23 +6,56 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, MountainIcon } from "lucide-react"
 import { useState } from "react"
 import AuthModal from "./auth-modal"
+import { useAuth } from "@/components/context/auth-context" // ✅ Import du contexte
 
 const navLinks = [
   { href: "/", label: "Accueil" },
-  { href: "/annonces", label: "Annonces" }, // Supposons une page /annonces
-  { href: "/publier", label: "Publier une annonce" }, // Supposons une page /publier
-  { href: "/tableau-de-bord", label: "Tableau de bord" }, // Supposons une page /tableau-de-bord
+  { href: "/annonces", label: "Annonces" },
+  { href: "/publier", label: "Publier une annonce" },
+  { href: "/tableau-de-bord", label: "Tableau de bord" },
 ]
 
 export default function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authModalType, setAuthModalType] = useState<"login" | "register">("login")
+  const { user, setUser } = useAuth() // ✅ Récupérer l'utilisateur
 
   const openAuthModal = (type: "login" | "register") => {
     setAuthModalType(type)
     setIsAuthModalOpen(true)
     setIsSheetOpen(false)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("user")
+    setUser(null)
+  }
+
+  const renderAuthButtons = () => {
+    if (user) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Bonjour, {user.name}</span>
+          <Button variant="outline" onClick={handleLogout}>
+            Se déconnecter
+          </Button>
+        </div>
+      )
+    }
+    return (
+      <>
+        <Button variant="outline" onClick={() => openAuthModal("login")}>
+          Se connecter
+        </Button>
+        <Button
+          className="bg-loka-secondary hover:bg-loka-secondary/90 text-white"
+          onClick={() => openAuthModal("register")}
+        >
+          S’inscrire
+        </Button>
+      </>
+    )
   }
 
   return (
@@ -33,6 +66,7 @@ export default function Header() {
             <MountainIcon className="h-6 w-6" />
             <span className="text-xl font-bold">Loka</span>
           </Link>
+
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             {navLinks.map((link) => (
               <Link
@@ -44,17 +78,11 @@ export default function Header() {
               </Link>
             ))}
           </nav>
+
           <div className="hidden md:flex items-center gap-2">
-            <Button variant="outline" onClick={() => openAuthModal("login")}>
-              Se connecter
-            </Button>
-            <Button
-              className="bg-loka-secondary hover:bg-loka-secondary/90 text-white"
-              onClick={() => openAuthModal("register")}
-            >
-              S’inscrire
-            </Button>
+            {renderAuthButtons()}
           </div>
+
           <div className="md:hidden">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
@@ -73,6 +101,7 @@ export default function Header() {
                     <MountainIcon className="h-6 w-6" />
                     <span className="text-xl font-bold">Loka</span>
                   </Link>
+
                   <nav className="grid gap-4">
                     {navLinks.map((link) => (
                       <Link
@@ -85,16 +114,30 @@ export default function Header() {
                       </Link>
                     ))}
                   </nav>
+
                   <div className="mt-8 flex flex-col gap-2">
-                    <Button variant="outline" className="w-full" onClick={() => openAuthModal("login")}>
-                      Se connecter
-                    </Button>
-                    <Button
-                      className="w-full bg-loka-secondary hover:bg-loka-secondary/90 text-white"
-                      onClick={() => openAuthModal("register")}
-                    >
-                      S’inscrire
-                    </Button>
+                    {user ? (
+                      <>
+                        <span className="text-sm font-medium text-muted-foreground text-left">
+                          Bonjour, {user.name}
+                        </span>
+                        <Button variant="outline" className="w-full" onClick={handleLogout}>
+                          Se déconnecter
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="outline" className="w-full" onClick={() => openAuthModal("login")}>
+                          Se connecter
+                        </Button>
+                        <Button
+                          className="w-full bg-loka-secondary hover:bg-loka-secondary/90 text-white"
+                          onClick={() => openAuthModal("register")}
+                        >
+                          S’inscrire
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </SheetContent>
@@ -102,6 +145,7 @@ export default function Header() {
           </div>
         </div>
       </header>
+
       <AuthModal
         isOpen={isAuthModalOpen}
         setIsOpen={setIsAuthModalOpen}

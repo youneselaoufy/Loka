@@ -66,5 +66,21 @@
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
-  }
+  },
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/youneselaoufy/Loka.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/youneselaoufy/Loka/issues"
+  },
+  "homepage": "https://github.com/youneselaoufy/Loka#readme",
+  "description": ""
 }

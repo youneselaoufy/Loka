@@ -1,7 +1,7 @@
 "use client"
 
+import { useState } from "react"
 import type React from "react"
-
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/use-toast" // Pour simuler la soumission
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/context/auth-context"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -25,35 +26,84 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, setIsOpen, type, setType }: AuthModalProps) {
   const { toast } = useToast()
+  const { setUser } = useAuth()
 
-  const handleLoginSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-    // Simulation de la logique de connexion
-    toast({
-      title: "Connexion (Simulation)",
-      description: "Vous seriez maintenant connecté.",
-    })
-    setIsOpen(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [name, setName] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+
+  const resetFields = () => {
+    setEmail("")
+    setPassword("")
+    setName("")
   }
 
-  const handleRegisterSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-    // Simulation de la logique d'inscription
-    toast({
-      title: "Inscription (Simulation)",
-      description: "Votre compte serait maintenant créé.",
-    })
-    setIsOpen(false)
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      const res = await fetch("http://localhost:4000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast({ title: "Erreur", description: data.error || "Identifiants invalides", variant: "destructive" })
+        return
+      }
+
+      localStorage.setItem("token", data.token)
+      localStorage.setItem("user", JSON.stringify(data.user))
+      setUser(data.user)
+
+      toast({ title: "Connexion réussie", description: `Bienvenue ${data.user.name}` })
+      setIsOpen(false)
+      resetFields()
+    } catch (err) {
+      toast({ title: "Erreur serveur", description: "Impossible de se connecter au serveur", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      const res = await fetch("http://localhost:4000/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast({ title: "Erreur", description: data.error || "Inscription échouée", variant: "destructive" })
+        return
+      }
+
+      toast({ title: "Inscription réussie", description: "Vous pouvez maintenant vous connecter." })
+      setType("login")
+      resetFields()
+    } catch (err) {
+      toast({ title: "Erreur serveur", description: "Impossible de contacter le serveur", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px]">
-        <Tabs value={type} onValueChange={(value) => setType(value as "login" | "register")} className="w-full">
+        <Tabs value={type} onValueChange={(v) => setType(v as "login" | "register")} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Se connecter</TabsTrigger>
             <TabsTrigger value="register">S’inscrire</TabsTrigger>
           </TabsList>
+
           <TabsContent value="login">
             <form onSubmit={handleLoginSubmit}>
               <DialogHeader className="mt-4">
@@ -63,16 +113,16 @@ export default function AuthModal({ isOpen, setIsOpen, type, setType }: AuthModa
               <div className="grid gap-4 py-4">
                 <div className="space-y-1">
                   <Label htmlFor="email-login">Courriel</Label>
-                  <Input id="email-login" type="email" placeholder="nom@exemple.com" required />
+                  <Input id="email-login" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="password-login">Mot de passe</Label>
-                  <Input id="password-login" type="password" required />
+                  <Input id="password-login" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" className="w-full bg-loka-primary hover:bg-loka-primary/90 text-white">
-                  Se connecter
+                <Button type="submit" disabled={isLoading} className="w-full bg-loka-primary hover:bg-loka-primary/90 text-white">
+                  {isLoading ? "Connexion..." : "Se connecter"}
                 </Button>
               </DialogFooter>
             </form>
@@ -83,6 +133,7 @@ export default function AuthModal({ isOpen, setIsOpen, type, setType }: AuthModa
               </Button>
             </p>
           </TabsContent>
+
           <TabsContent value="register">
             <form onSubmit={handleRegisterSubmit}>
               <DialogHeader className="mt-4">
@@ -92,20 +143,20 @@ export default function AuthModal({ isOpen, setIsOpen, type, setType }: AuthModa
               <div className="grid gap-4 py-4">
                 <div className="space-y-1">
                   <Label htmlFor="name-register">Nom complet</Label>
-                  <Input id="name-register" placeholder="Votre nom complet" required />
+                  <Input id="name-register" value={name} onChange={(e) => setName(e.target.value)} required />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="email-register">Courriel</Label>
-                  <Input id="email-register" type="email" placeholder="nom@exemple.com" required />
+                  <Input id="email-register" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="password-register">Mot de passe</Label>
-                  <Input id="password-register" type="password" required />
+                  <Input id="password-register" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" className="w-full bg-loka-secondary hover:bg-loka-secondary/90 text-white">
-                  S’inscrire
+                <Button type="submit" disabled={isLoading} className="w-full bg-loka-secondary hover:bg-loka-secondary/90 text-white">
+                  {isLoading ? "Inscription..." : "S’inscrire"}
                 </Button>
               </DialogFooter>
             </form>
