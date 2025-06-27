@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 const PORT = 4000;
-const SECRET = "ton_secret_jwt_super_safe"; // à mettre dans un .env en prod
+const SECRET = "ton_secret_jwt_super_safe"; // à sécuriser avec .env
 
 // Middleware
 app.use(cors());
@@ -36,7 +36,7 @@ app.get("/", (req, res) => {
   res.send("Loka backend is running.");
 });
 
-// 🔍 Annonces avec filtres
+// 🔍 Toutes les annonces avec filtres (page d’accueil / annonces)
 app.get("/api/listings", (req, res) => {
   const { title, location, category, minPrice, maxPrice } = req.query;
   let query = "SELECT * FROM listings WHERE 1=1";
@@ -77,21 +77,21 @@ app.get("/api/featured-listings", (req, res) => {
   });
 });
 
-// ➕ Ajouter une annonce
+// ➕ Ajouter une annonce (avec userEmail)
 app.post("/api/listings", upload.single("image"), (req, res) => {
-  const { title, pricePerDay, location, availability, category } = req.body;
+  const { title, pricePerDay, location, availability, category, userEmail } = req.body;
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-  if (!title || !pricePerDay || !location || !availability || !category) {
+  if (!title || !pricePerDay || !location || !availability || !category || !userEmail) {
     return res.status(400).json({ error: "Tous les champs requis ne sont pas remplis." });
   }
 
   const id = Date.now().toString();
 
   db.run(
-    `INSERT INTO listings (id, title, pricePerDay, location, availability, imageUrl, category)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, title, pricePerDay, location, availability, imageUrl, category],
+    `INSERT INTO listings (id, title, pricePerDay, location, availability, imageUrl, category, userEmail)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, title, pricePerDay, location, availability, imageUrl, category, userEmail],
     (err) => {
       if (err) return res.status(500).json({ error: "Erreur lors de l'insertion." });
       res.status(201).json({ message: "Annonce ajoutée avec succès", id });
@@ -99,6 +99,16 @@ app.post("/api/listings", upload.single("image"), (req, res) => {
   );
 });
 
+// 🧑‍💼 Récupérer les annonces d’un utilisateur
+app.get("/api/user/listings", (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: "Email requis" });
+
+  db.all("SELECT * FROM listings WHERE userEmail = ?", [email], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
 
 // ======================= AUTHENTIFICATION =======================
 

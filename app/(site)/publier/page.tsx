@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import { CheckCircle, Upload } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function PublierAnnoncePage() {
+  const router = useRouter()
+
   const [formData, setFormData] = useState({
     title: "",
     pricePerDay: "",
@@ -14,6 +17,10 @@ export default function PublierAnnoncePage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  const user = typeof window !== "undefined"
+    ? JSON.parse(localStorage.getItem("user") || "{}")
+    : {}
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -29,23 +36,41 @@ export default function PublierAnnoncePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!user?.email) {
+      alert("Vous devez être connecté pour publier une annonce.")
+      return
+    }
+
     const data = new FormData()
     Object.entries(formData).forEach(([key, value]) => {
       data.append(key, value)
     })
     if (imageFile) data.append("image", imageFile)
+    data.append("userEmail", user.email) // ✅ important
 
-    const res = await fetch("http://localhost:4000/api/listings", {
-      method: "POST",
-      body: data,
-    })
+    try {
+      const res = await fetch("http://localhost:4000/api/listings", {
+        method: "POST",
+        body: data,
+      })
 
-    if (res.ok) {
-      setSuccess(true)
-      setFormData({ title: "", pricePerDay: "", location: "", availability: "", category: "" })
-      setImageFile(null)
-      setImagePreview(null)
-      setTimeout(() => setSuccess(false), 4000)
+      if (res.ok) {
+        setSuccess(true)
+        setFormData({ title: "", pricePerDay: "", location: "", availability: "", category: "" })
+        setImageFile(null)
+        setImagePreview(null)
+        setTimeout(() => {
+          setSuccess(false)
+          router.push("/tableau-de-bord")
+        }, 2000)
+      } else {
+        const err = await res.json()
+        alert("Erreur: " + err?.error || "Échec de l'envoi.")
+      }
+    } catch (err) {
+      console.error("Erreur réseau:", err)
+      alert("Erreur réseau.")
     }
   }
 
