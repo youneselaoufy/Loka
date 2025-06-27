@@ -98,6 +98,17 @@ app.post("/api/listings", upload.single("image"), (req, res) => {
     }
   );
 });
+// 🔍 Récupérer une annonce par ID
+app.get("/api/listings/:id", (req, res) => {
+  const { id } = req.params;
+
+  db.get("SELECT * FROM listings WHERE id = ?", [id], (err, row) => {
+    if (err) return res.status(500).json({ error: "Erreur serveur." });
+    if (!row) return res.status(404).json({ error: "Annonce introuvable." });
+    res.json(row);
+  });
+});
+
 
 // 🧑‍💼 Récupérer les annonces d’un utilisateur
 app.get("/api/user/listings", (req, res) => {

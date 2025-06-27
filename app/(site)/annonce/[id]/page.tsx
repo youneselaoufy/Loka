@@ -1,5 +1,3 @@
-// app/annonce/[id]/page.tsx
-
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { CalendarDays, MapPin } from "lucide-react"
@@ -18,22 +16,14 @@ interface Listing {
   ownerName?: string
 }
 
-// Remplace par ton vrai fetch backend
-async function getListing(id: string): Promise<Listing | null> {
-  try {
-    const res = await fetch(`http://localhost:4000/api/listings/${id}`, {
-      cache: "no-store",
-    })
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
-  }
+type AnnoncePageProps = {
+  params: { id: string }
 }
 
-export default async function AnnoncePage({ params }: { params: { id: string } }) {
-  const listing = await getListing(params.id)
+export default async function AnnoncePage({ params }: AnnoncePageProps) {
+  const { id } = params
 
+  const listing = await getListing(id)
   if (!listing) return notFound()
 
   const imageSrc = listing.imageUrl?.startsWith("http")
@@ -79,4 +69,17 @@ export default async function AnnoncePage({ params }: { params: { id: string } }
       <p className="text-muted-foreground">Propriétaire : {listing.ownerName || "Utilisateur inconnu"}</p>
     </div>
   )
+}
+
+// Déplace cette fonction en bas pour garder la structure propre
+async function getListing(id: string): Promise<Listing | null> {
+  try {
+    const res = await fetch(`http://localhost:4000/api/listings/${id}`, {
+      cache: "no-store",
+    })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
 }
