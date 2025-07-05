@@ -8,11 +8,32 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 const PORT = 4000;
-const SECRET = "ton_secret_jwt_super_safe"; // à sécuriser avec .env
+require("dotenv").config();
+const SECRET = process.env.JWT_SECRET;
+
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+// Middleware pour vérifier le token JWT
+function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Accès non autorisé" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // infos utiles : { id, name, email }
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: "Token invalide" });
+  }
+}
+
 
 // Connexion à la base
 const dbPath = path.resolve(__dirname, "db.sqlite");
@@ -111,8 +132,9 @@ app.get("/api/listings/:id", (req, res) => {
 
 
 // 🧑‍💼 Récupérer les annonces d’un utilisateur
-app.get("/api/user/listings", (req, res) => {
-  const { email } = req.query;
+app.get("/api/user/listings", verifyToken, (req, res) => {
+  const email = req.user.email;
+
   if (!email) return res.status(400).json({ error: "Email requis" });
 
   db.all("SELECT * FROM listings WHERE userEmail = ?", [email], (err, rows) => {

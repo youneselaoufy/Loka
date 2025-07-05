@@ -13,17 +13,25 @@ type Listing = {
 
 export default function DashboardPage() {
   const [listings, setListings] = useState<Listing[]>([])
+
   const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem("user") || "{}") : {}
+  const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null
 
   useEffect(() => {
-    if (!user?.email) return
+    if (!user?.email || !token) return
 
     const fetchListings = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/api/user/listings?email=${user.email}`)
+        const res = await fetch(`http://localhost:4000/api/user/listings`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
         const data = await res.json()
 
-        // ✅ Sécurisation du .map
         if (Array.isArray(data)) {
           setListings(data)
         } else {
@@ -37,7 +45,7 @@ export default function DashboardPage() {
     }
 
     fetchListings()
-  }, [user])
+  }, [user, token])
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-10">
@@ -58,11 +66,10 @@ export default function DashboardPage() {
           {listings.map((item) => (
             <div key={item.id} className="border rounded-lg overflow-hidden shadow hover:shadow-md transition">
               <img
-  src={item.imageUrl.startsWith("http") ? item.imageUrl : `http://localhost:4000${item.imageUrl}`}
-  alt={item.title}
-  className="h-40 w-full object-cover"
-/>
-
+                src={item.imageUrl?.startsWith("http") ? item.imageUrl : `http://localhost:4000${item.imageUrl}`}
+                alt={item.title}
+                className="h-40 w-full object-cover"
+              />
               <div className="p-4">
                 <h2 className="font-semibold text-lg mb-1">{item.title}</h2>
                 <p className="text-sm text-gray-600 mb-2">${item.pricePerDay} / jour</p>
