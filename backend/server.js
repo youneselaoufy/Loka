@@ -1,3 +1,5 @@
+require("dotenv").config(); // ✅ Doit être en tout premier
+
 const express = require("express");
 const cors = require("cors");
 const sqlite3 = require("sqlite3").verbose();
@@ -8,13 +10,14 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 const PORT = 4000;
-require("dotenv").config();
 const SECRET = process.env.JWT_SECRET;
 
+console.log("✅ JWT_SECRET utilisé :", SECRET); // pour vérifier qu’il est bien chargé
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
 // Middleware pour vérifier le token JWT
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -26,14 +29,15 @@ function verifyToken(req, res, next) {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // infos utiles : { id, name, email }
+    console.log("🔐 Token reçu:", token); // Ajout pour debug
+    const decoded = jwt.verify(token, SECRET);
+    req.user = decoded;
     next();
   } catch (err) {
+    console.error("❌ Token invalide:", err.message);
     return res.status(403).json({ error: "Token invalide" });
   }
 }
-
 
 // Connexion à la base
 const dbPath = path.resolve(__dirname, "db.sqlite");
@@ -57,7 +61,7 @@ app.get("/", (req, res) => {
   res.send("Loka backend is running.");
 });
 
-// 🔍 Toutes les annonces avec filtres (page d’accueil / annonces)
+// 🔍 Toutes les annonces
 app.get("/api/listings", (req, res) => {
   const { title, location, category, minPrice, maxPrice } = req.query;
   let query = "SELECT * FROM listings WHERE 1=1";
@@ -98,7 +102,7 @@ app.get("/api/featured-listings", (req, res) => {
   });
 });
 
-// ➕ Ajouter une annonce (avec userEmail)
+// ➕ Ajouter une annonce
 app.post("/api/listings", upload.single("image"), (req, res) => {
   const { title, pricePerDay, location, availability, category, userEmail } = req.body;
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
@@ -119,10 +123,10 @@ app.post("/api/listings", upload.single("image"), (req, res) => {
     }
   );
 });
-// 🔍 Récupérer une annonce par ID
+
+// 🔍 Annonce par ID
 app.get("/api/listings/:id", (req, res) => {
   const { id } = req.params;
-
   db.get("SELECT * FROM listings WHERE id = ?", [id], (err, row) => {
     if (err) return res.status(500).json({ error: "Erreur serveur." });
     if (!row) return res.status(404).json({ error: "Annonce introuvable." });
@@ -130,11 +134,9 @@ app.get("/api/listings/:id", (req, res) => {
   });
 });
 
-
-// 🧑‍💼 Récupérer les annonces d’un utilisateur
+// 🧑‍💼 Annonces d’un utilisateur
 app.get("/api/user/listings", verifyToken, (req, res) => {
   const email = req.user.email;
-
   if (!email) return res.status(400).json({ error: "Email requis" });
 
   db.all("SELECT * FROM listings WHERE userEmail = ?", [email], (err, rows) => {
@@ -148,7 +150,6 @@ app.get("/api/user/listings", verifyToken, (req, res) => {
 // 🔐 Inscription
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
-
   if (!name || !email || !password)
     return res.status(400).json({ error: "Champs requis manquants." });
 
@@ -170,7 +171,6 @@ app.post("/api/register", async (req, res) => {
 // 🔐 Connexion
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
-
   if (!email || !password)
     return res.status(400).json({ error: "Champs requis manquants." });
 
@@ -188,6 +188,42 @@ app.post("/api/login", (req, res) => {
 
     res.json({ message: "Connexion réussie", token, user: { name: user.name, email: user.email } });
   });
+});
+
+// 📦 Louer une annonce
+app.post("/api/rentals", verifyToken, (req, res) => {
+  const rentalId = Date.now().toString();
+  const userId = req.user.id;
+  const { listingId } = req.body;
+  const rentalDate = new Date().toISOString();
+
+  if (!listingId) {
+    return res.status(400).json({ error: "ID de l'annonce requis" });
+  }
+
+  const stmt = db.prepare(
+    "INSERT INTO rentals (id, userId, listingId, rentalDate) VALUES (?, ?, ?, ?)"
+  );
+  stmt.run(rentalId, userId, listingId, rentalDate, (err) => {
+    if (err) return res.status(500).json({ error: "Erreur lors de la location." });
+    res.status(201).json({ message: "Annonce louée avec succès", rentalId });
+  });
+});
+
+// 📦 Voir les locations d’un utilisateur
+app.get("/api/rentals", verifyToken, (req, res) => {
+  const userId = req.user.id;
+  db.all(
+    `SELECT rentals.*, listings.title, listings.imageUrl, listings.pricePerDay 
+     FROM rentals 
+     JOIN listings ON rentals.listingId = listings.id 
+     WHERE rentals.userId = ?`,
+    [userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "Erreur serveur" });
+      res.json(rows);
+    }
+  );
 });
 
 // ================= DÉMARRAGE =================

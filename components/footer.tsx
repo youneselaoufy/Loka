@@ -48,7 +48,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t mt-8 pt-6 text-center text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Loka Inc. Tous droits réservés.</p>
+          <p>&copy; {new Date().getFullYear()} Loka de younes et amine . Tous droits réservés.</p>
           <p className="mt-1">Loka est un projet fictif à des fins de démonstration.</p>
         </div>
       </div>
