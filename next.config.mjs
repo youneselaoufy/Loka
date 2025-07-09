@@ -2,7 +2,9 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: "/loka", 
+  basePath: "/loka",
+  output: "standalone", // ← Essentiel pour la compatibilité avec le déploiement
+
   eslint: {
     ignoreDuringBuilds: true,
   },
