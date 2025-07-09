@@ -1,10 +1,7 @@
 // next.config.mjs
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: "/loka",
-  output: "standalone", // ← Essentiel pour la compatibilité avec le déploiement
-
+  output: "standalone",
   eslint: {
     ignoreDuringBuilds: true,
   },
