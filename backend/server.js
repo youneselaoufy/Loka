@@ -15,7 +15,10 @@ const SECRET = process.env.JWT_SECRET;
 console.log("✅ JWT_SECRET utilisé :", SECRET); // pour vérifier qu’il est bien chargé
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000", // autorise les requêtes depuis ton frontend
+  credentials: true,
+}));
 app.use(express.json());
 
 // Middleware pour vérifier le token JWT
