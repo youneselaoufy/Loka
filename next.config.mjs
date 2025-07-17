@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 
-// TEMPORAIRE : définir le port avant le build standalone
-process.env.PORT = "3100";
 
 const nextConfig = {
   output: "standalone",            // ✅ Nécessaire pour déploiement via PM2
