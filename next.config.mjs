@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 
-
 const nextConfig = {
-  output: "standalone",            // ✅ Nécessaire pour déploiement via PM2
-  basePath: "/loka",               // ✅ Nécessaire pour sous-chemin Nginx
+  output: "standalone",
+  basePath: "/loka",              // ✅ Pour router depuis /loka
+  assetPrefix: "/loka",           // ✅ Pour charger correctement _next/static/ et autres assets
   eslint: {
     ignoreDuringBuilds: true,
   },
