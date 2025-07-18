@@ -14,6 +14,12 @@ interface Listing {
   ownerName?: string
 }
 
+type PageProps = {
+  params: {
+    id: string
+  }
+}
+
 async function getListing(id: string): Promise<Listing | null> {
   try {
     const res = await fetch(`http://localhost:4000/api/listings/${id}`, {
@@ -26,7 +32,7 @@ async function getListing(id: string): Promise<Listing | null> {
   }
 }
 
-export default async function AnnoncePage({ params }: { params: { id: string } }) {
+export default async function AnnoncePage({ params }: PageProps) {
   const listing = await getListing(params.id)
   if (!listing) return notFound()
 
