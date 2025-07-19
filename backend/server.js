@@ -1,4 +1,5 @@
-require("dotenv").config(); // ✅ À garder en haut
+console.log("��� [ACTIF] Ceci est le BON server.js exécuté !");
+require("dotenv").config({ override: false }); // ✅ À garder en haut
 
 const express = require("express");
 const cors = require("cors");
@@ -180,6 +181,8 @@ app.post("/api/login", (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: "Mot de passe incorrect." });
 
+console.log("DEBUG SIGN TOKEN SECRET:", SECRET)
+console.log("DEBUG SIGN TOKEN typeof SECRET:", typeof SECRET)
     const token = jwt.sign({ id: user.id, name: user.name, email: user.email }, SECRET, {
       expiresIn: "7d",
     });

@@ -17,8 +17,9 @@ module.exports = {
       script: "server.js",
       env: {
         NODE_ENV: "production",
-        PORT: "4000"
+        PORT: "4000",
+        JWT_SECRET: "monSuperSecret123456" // ✅ Ajouté ici
       }
     }
   ]
-};
+}
