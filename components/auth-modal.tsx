@@ -43,7 +43,7 @@ export default function AuthModal({ isOpen, setIsOpen, type, setType }: AuthModa
     e.preventDefault()
     setIsLoading(true)
     try {
-      const res = await fetch("http://localhost:4000/api/login", {
+      const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -73,7 +73,7 @@ export default function AuthModal({ isOpen, setIsOpen, type, setType }: AuthModa
     e.preventDefault()
     setIsLoading(true)
     try {
-      const res = await fetch("http://localhost:4000/api/register", {
+      const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),

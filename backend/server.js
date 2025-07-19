@@ -15,8 +15,13 @@ const SECRET = process.env.JWT_SECRET;
 console.log("✅ JWT_SECRET utilisé :", SECRET); // pour vérifier qu’il est bien chargé
 
 // Middleware
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://loka.youneselaoufy.com"
+];
+
 app.use(cors({
-  origin: "http://localhost:3000", // autorise les requêtes depuis ton frontend
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(express.json());
@@ -232,5 +237,5 @@ app.get("/api/rentals", verifyToken, (req, res) => {
 // ================= DÉMARRAGE =================
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });

@@ -22,7 +22,7 @@ type PageProps = {
 
 async function getListing(id: string): Promise<Listing | null> {
   try {
-    const res = await fetch(`http://localhost:4000/api/listings/${id}`, {
+    const res = await fetch(`/api/listings/${id}`, {
       cache: "no-store",
     })
     if (!res.ok) return null

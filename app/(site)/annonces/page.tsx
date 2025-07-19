@@ -20,7 +20,7 @@ export default function AnnoncesPage() {
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/listings")
+        const res = await fetch("/api/listings")
         const data = await res.json()
         setListings(data)
       } catch (error) {
@@ -45,7 +45,7 @@ export default function AnnoncesPage() {
               className="rounded-xl overflow-hidden shadow hover:shadow-lg transition-all bg-white border border-gray-200"
             >
               <img
-                src={item.imageUrl.startsWith("http") ? item.imageUrl : `http://localhost:4000${item.imageUrl}`}
+                src={item.imageUrl.startsWith("http") ? item.imageUrl : `https://loka.youneselaoufy.com${item.imageUrl}`}
                 alt={item.title}
                 className="w-full h-52 object-cover"
               />
