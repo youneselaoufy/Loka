@@ -120,7 +120,7 @@ export default function DashboardPage() {
                   src={
                     item.imageUrl.startsWith("http")
                       ? item.imageUrl
-                      : `https://loka.youneselaoufy.com${item.imageUrl}`
+                      : `http://localhost:4000${item.imageUrl}`
                   }
                   alt={item.title}
                   className="h-40 w-full object-cover"
@@ -162,7 +162,7 @@ export default function DashboardPage() {
                 src={
                   rental.imageUrl.startsWith("http")
                     ? rental.imageUrl
-                    : `https://loka.youneselaoufy.com${rental.imageUrl}`
+                    : `http://localhost:4000${rental.imageUrl}`
                 }
                 alt={rental.title}
                 className="h-40 w-full object-cover"

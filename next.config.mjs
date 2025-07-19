@@ -1,21 +1,14 @@
 /** @type {import('next').NextConfig} */
-const isProd = process.env.NODE_ENV === "production";
-
 const nextConfig = {
   reactStrictMode: true,
-  basePath: "",             // ❌ No basePath since you're under subdomain
-  assetPrefix: "",          // ❌ No assetPrefix
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "loka.youneselaoufy.com",
+        protocol: "http",
+        hostname: "localhost",
+        port: "4000",
         pathname: "/uploads/**",
       },
     ],
@@ -24,7 +17,7 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://127.0.0.1:4000/api/:path*", // ✅ internal API calls via Nginx
+        destination: "http://localhost:4000/api/:path*",
       },
     ];
   },
