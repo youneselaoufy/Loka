@@ -12,7 +12,13 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-console.log("✅ JWT_SECRET utilisé :", process.env.JWT_SECRET);
+// 🔐 Assure que le JWT_SECRET est bien chargé
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET) {
+  console.error("❌ ERREUR : JWT_SECRET est manquant dans l'environnement !");
+  process.exit(1);
+}
+console.log("✅ JWT_SECRET initialisé :", SECRET);
 
 const allowedOrigins = [
   "http://localhost:3000",
@@ -30,7 +36,7 @@ function verifyToken(req, res, next) {
 
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -52,6 +58,8 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 app.use("/uploads", express.static("uploads"));
+
+// ================= ROUTES =================
 
 app.get("/", (req, res) => res.send("Loka backend is running."));
 
@@ -117,6 +125,8 @@ app.get("/api/user/listings", verifyToken, (req, res) => {
   });
 });
 
+// ================= AUTH =================
+
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password)
@@ -147,18 +157,17 @@ app.post("/api/login", (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: "Mot de passe incorrect." });
 
-    console.log("🟡 DEBUG SIGN TOKEN SECRET:", process.env.JWT_SECRET);
-    console.log("🟡 typeof JWT_SECRET:", typeof process.env.JWT_SECRET);
-
     const token = jwt.sign(
       { id: user.id, name: user.name, email: user.email },
-      process.env.JWT_SECRET,
+      SECRET,
       { expiresIn: "7d" }
     );
 
     res.json({ message: "Connexion réussie", token, user: { name: user.name, email: user.email } });
   });
 });
+
+// ================= RENTALS =================
 
 app.post("/api/rentals", verifyToken, (req, res) => {
   const rentalId = Date.now().toString();
@@ -192,6 +201,8 @@ app.get("/api/rentals", verifyToken, (req, res) => {
     }
   );
 });
+
+// ================= DÉMARRAGE =================
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on port :${PORT}`);
