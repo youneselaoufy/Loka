@@ -49,18 +49,20 @@ export default function AnnonceDetail({ listing }: { listing: Listing }) {
     }
   }
 
-  const imageSrc = listing.imageUrl?.startsWith("http")
-    ? listing.imageUrl
-    : listing.imageUrl
-    ? `http://localhost:4000${listing.imageUrl}`
-    : "/placeholder.svg?width=800&height=400&text=Pas+de+photo"
+  const getImageSrc = (imageUrl?: string) => {
+    if (!imageUrl) return "/placeholder.svg?width=800&height=400&text=Pas+de+photo"
+    if (imageUrl.startsWith("http")) return imageUrl
+    return process.env.NODE_ENV === "production"
+      ? `https://loka.youneselaoufy.com${imageUrl}`
+      : `http://localhost:4000${imageUrl}`
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <div className="relative w-full h-[400px] rounded-lg overflow-hidden shadow">
           <Image
-            src={imageSrc}
+            src={getImageSrc(listing.imageUrl)}
             alt={listing.title}
             fill
             className="object-cover"

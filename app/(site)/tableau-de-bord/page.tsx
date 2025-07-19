@@ -20,6 +20,8 @@ type Rental = {
   rentalDate: string
 }
 
+const BASE_URL = "https://loka.youneselaoufy.com"
+
 export default function DashboardPage() {
   const [listings, setListings] = useState<Listing[]>([])
   const [rentals, setRentals] = useState<Rental[]>([])
@@ -59,7 +61,6 @@ export default function DashboardPage() {
         const data = await res.json()
         if (isMounted) {
           const unique = Array.isArray(data)
-            // on dé-doublonne par listingId, pas par rental.id
             ? [...new Map(data.map(item => [item.listingId, item])).values()]
             : []
           setRentals(unique)
@@ -77,7 +78,6 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Set des annonces déjà louées
   const rentedIds = new Set(rentals.map(r => r.listingId))
 
   return (
@@ -106,6 +106,10 @@ export default function DashboardPage() {
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
           {listings.map((item) => {
             const isRented = rentedIds.has(item.id)
+            const imageSrc = item.imageUrl.startsWith("http")
+              ? item.imageUrl
+              : `${BASE_URL}${item.imageUrl}`
+
             return (
               <div
                 key={item.id}
@@ -117,11 +121,7 @@ export default function DashboardPage() {
                   </span>
                 )}
                 <img
-                  src={
-                    item.imageUrl.startsWith("http")
-                      ? item.imageUrl
-                      : `http://localhost:4000${item.imageUrl}`
-                  }
+                  src={imageSrc}
                   alt={item.title}
                   className="h-40 w-full object-cover"
                 />
@@ -153,34 +153,36 @@ export default function DashboardPage() {
         <p className="text-gray-600">Aucune location pour le moment.</p>
       ) : (
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {rentals.map((rental) => (
-            <div
-              key={rental.id}
-              className="border rounded-lg overflow-hidden shadow hover:shadow-md transition"
-            >
-              <img
-                src={
-                  rental.imageUrl.startsWith("http")
-                    ? rental.imageUrl
-                    : `http://localhost:4000${rental.imageUrl}`
-                }
-                alt={rental.title}
-                className="h-40 w-full object-cover"
-              />
-              <div className="p-4">
-                <h2 className="font-semibold text-lg mb-1">
-                  {rental.title}
-                </h2>
-                <p className="text-sm text-gray-600 mb-2">
-                  ${rental.pricePerDay} / jour
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Loué le :{" "}
-                  {new Date(rental.rentalDate).toLocaleDateString("fr-FR")}
-                </p>
+          {rentals.map((rental) => {
+            const imageSrc = rental.imageUrl.startsWith("http")
+              ? rental.imageUrl
+              : `${BASE_URL}${rental.imageUrl}`
+
+            return (
+              <div
+                key={rental.id}
+                className="border rounded-lg overflow-hidden shadow hover:shadow-md transition"
+              >
+                <img
+                  src={imageSrc}
+                  alt={rental.title}
+                  className="h-40 w-full object-cover"
+                />
+                <div className="p-4">
+                  <h2 className="font-semibold text-lg mb-1">
+                    {rental.title}
+                  </h2>
+                  <p className="text-sm text-gray-600 mb-2">
+                    ${rental.pricePerDay} / jour
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Loué le :{" "}
+                    {new Date(rental.rentalDate).toLocaleDateString("fr-FR")}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </main>

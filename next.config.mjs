@@ -1,23 +1,31 @@
 /** @type {import('next').NextConfig} */
+
 const nextConfig = {
   reactStrictMode: true,
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   images: {
     remotePatterns: [
       {
-        protocol: "http",
-        hostname: "localhost",
-        port: "4000",
+        protocol: "https",
+        hostname: "loka.youneselaoufy.com",
         pathname: "/uploads/**",
       },
     ],
   },
+
   async rewrites() {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:4000/api/:path*",
+        destination: "http://127.0.0.1:4000/api/:path*", // ✅ internal API calls via Nginx reverse proxy
       },
     ];
   },

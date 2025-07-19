@@ -1,4 +1,4 @@
-require("dotenv").config(); // ✅ Doit être en tout premier
+require("dotenv").config(); // ✅ À garder en haut
 
 const express = require("express");
 const cors = require("cors");
@@ -9,30 +9,34 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const app = express();
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 const SECRET = process.env.JWT_SECRET;
 
-console.log("✅ JWT_SECRET utilisé :", SECRET); // pour vérifier qu’il est bien chargé
+// ✅ Debug token secret
+console.log("✅ JWT_SECRET utilisé :", SECRET);
 
-// Middleware
+// ✅ Autoriser plusieurs origines (localhost + domaine prod)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://loka.youneselaoufy.com"
+];
+
 app.use(cors({
-  origin: "http://localhost:3000", // autorise les requêtes depuis ton frontend
+  origin: allowedOrigins,
   credentials: true,
 }));
+
 app.use(express.json());
 
-// Middleware pour vérifier le token JWT
+// ✅ Vérification du token
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader?.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Accès non autorisé" });
   }
 
   const token = authHeader.split(" ")[1];
-
   try {
-    console.log("🔐 Token reçu:", token); // Ajout pour debug
     const decoded = jwt.verify(token, SECRET);
     req.user = decoded;
     next();
@@ -42,11 +46,11 @@ function verifyToken(req, res, next) {
   }
 }
 
-// Connexion à la base
+// ✅ Connexion à la base
 const dbPath = path.resolve(__dirname, "db.sqlite");
 const db = new sqlite3.Database(dbPath);
 
-// Upload d'images
+// ✅ Upload images
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, "uploads/"),
   filename: (_, file, cb) => {
@@ -60,11 +64,9 @@ app.use("/uploads", express.static("uploads"));
 
 // ================= ROUTES =================
 
-app.get("/", (req, res) => {
-  res.send("Loka backend is running.");
-});
+app.get("/", (req, res) => res.send("Loka backend is running."));
 
-// 🔍 Toutes les annonces
+// 🔍 Filtrage dynamique
 app.get("/api/listings", (req, res) => {
   const { title, location, category, minPrice, maxPrice } = req.query;
   let query = "SELECT * FROM listings WHERE 1=1";
@@ -97,7 +99,7 @@ app.get("/api/listings", (req, res) => {
   });
 });
 
-// ⭐ Annonces en vedette
+// ⭐ Sélection vedette
 app.get("/api/featured-listings", (req, res) => {
   db.all("SELECT * FROM listings WHERE isFeatured = 1 LIMIT 3", (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -105,7 +107,7 @@ app.get("/api/featured-listings", (req, res) => {
   });
 });
 
-// ➕ Ajouter une annonce
+// ➕ Créer une annonce
 app.post("/api/listings", upload.single("image"), (req, res) => {
   const { title, pricePerDay, location, availability, category, userEmail } = req.body;
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
@@ -127,7 +129,7 @@ app.post("/api/listings", upload.single("image"), (req, res) => {
   );
 });
 
-// 🔍 Annonce par ID
+// 🔍 Obtenir une annonce
 app.get("/api/listings/:id", (req, res) => {
   const { id } = req.params;
   db.get("SELECT * FROM listings WHERE id = ?", [id], (err, row) => {
@@ -137,20 +139,17 @@ app.get("/api/listings/:id", (req, res) => {
   });
 });
 
-// 🧑‍💼 Annonces d’un utilisateur
+// 🔍 Annonces par utilisateur
 app.get("/api/user/listings", verifyToken, (req, res) => {
   const email = req.user.email;
-  if (!email) return res.status(400).json({ error: "Email requis" });
-
   db.all("SELECT * FROM listings WHERE userEmail = ?", [email], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
-// ======================= AUTHENTIFICATION =======================
+// ================= AUTH =================
 
-// 🔐 Inscription
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password)
@@ -159,31 +158,27 @@ app.post("/api/register", async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
   const id = Date.now().toString();
 
-  const stmt = db.prepare("INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)");
-  stmt.run(id, name, email, hashedPassword, (err) => {
-    if (err) {
-      if (err.message.includes("UNIQUE")) {
+  db.run(
+    "INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)",
+    [id, name, email, hashedPassword],
+    (err) => {
+      if (err?.message.includes("UNIQUE")) {
         return res.status(409).json({ error: "Email déjà utilisé." });
       }
-      return res.status(500).json({ error: "Erreur serveur." });
+      if (err) return res.status(500).json({ error: "Erreur serveur." });
+      res.status(201).json({ message: "Utilisateur enregistré avec succès." });
     }
-    res.status(201).json({ message: "Utilisateur enregistré avec succès." });
-  });
+  );
 });
 
-// 🔐 Connexion
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ error: "Champs requis manquants." });
-
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
     if (err) return res.status(500).json({ error: "Erreur serveur." });
     if (!user) return res.status(401).json({ error: "Utilisateur introuvable." });
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword)
-      return res.status(401).json({ error: "Mot de passe incorrect." });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: "Mot de passe incorrect." });
 
     const token = jwt.sign({ id: user.id, name: user.name, email: user.email }, SECRET, {
       expiresIn: "7d",
@@ -200,20 +195,19 @@ app.post("/api/rentals", verifyToken, (req, res) => {
   const { listingId } = req.body;
   const rentalDate = new Date().toISOString();
 
-  if (!listingId) {
-    return res.status(400).json({ error: "ID de l'annonce requis" });
-  }
+  if (!listingId) return res.status(400).json({ error: "ID de l'annonce requis" });
 
-  const stmt = db.prepare(
-    "INSERT INTO rentals (id, userId, listingId, rentalDate) VALUES (?, ?, ?, ?)"
+  db.run(
+    "INSERT INTO rentals (id, userId, listingId, rentalDate) VALUES (?, ?, ?, ?)",
+    [rentalId, userId, listingId, rentalDate],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Erreur lors de la location." });
+      res.status(201).json({ message: "Annonce louée avec succès", rentalId });
+    }
   );
-  stmt.run(rentalId, userId, listingId, rentalDate, (err) => {
-    if (err) return res.status(500).json({ error: "Erreur lors de la location." });
-    res.status(201).json({ message: "Annonce louée avec succès", rentalId });
-  });
 });
 
-// 📦 Voir les locations d’un utilisateur
+// 📦 Voir les locations
 app.get("/api/rentals", verifyToken, (req, res) => {
   const userId = req.user.id;
   db.all(
@@ -232,5 +226,5 @@ app.get("/api/rentals", verifyToken, (req, res) => {
 // ================= DÉMARRAGE =================
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+  console.log(`✅ Server running on port :${PORT}`);
 });
