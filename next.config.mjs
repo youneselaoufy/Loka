@@ -1,15 +1,8 @@
 /** @type {import('next').NextConfig} */
-
 const nextConfig = {
-  output: "standalone",
-  basePath: "/loka",              // ✅ Pour router depuis /loka
-  assetPrefix: "/loka",           // ✅ Pour charger correctement _next/static/ et autres assets
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  reactStrictMode: true,
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   images: {
     remotePatterns: [
       {

@@ -27,7 +27,7 @@ export default function AnnonceDetail({ listing }: { listing: Listing }) {
 
     setLoading(true)
     try {
-      const res = await fetch("http://localhost:4000/api/rentals", {
+      const res = await fetch("/api/rentals", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

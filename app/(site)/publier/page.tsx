@@ -50,7 +50,7 @@ export default function PublierAnnoncePage() {
     data.append("userEmail", user.email) // ✅ important
 
     try {
-      const res = await fetch("http://localhost:4000/api/listings", {
+      const res = await fetch("/api/listings", {
         method: "POST",
         body: data,
       })

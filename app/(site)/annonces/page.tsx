@@ -20,7 +20,7 @@ export default function AnnoncesPage() {
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/listings")
+        const res = await fetch("/api/listings")
         const data = await res.json()
         setListings(data)
       } catch (error) {

@@ -34,7 +34,7 @@ export default function DashboardPage() {
 
     const fetchListings = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/api/user/listings`, {
+        const res = await fetch(`/api/user/listings`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) throw new Error("Erreur lors du chargement des annonces.")
@@ -52,7 +52,7 @@ export default function DashboardPage() {
 
     const fetchRentals = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/api/rentals`, {
+        const res = await fetch(`/api/rentals`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) throw new Error("Erreur lors du chargement des locations.")

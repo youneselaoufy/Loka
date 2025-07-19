@@ -1,13 +1,12 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "loka",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 3100 -H 127.0.0.1",
+    "start": "next start -p 3100 -H 0.0.0.0",
     "lint": "next lint"
   },
   "dependencies": {
@@ -29,7 +28,7 @@
     "@radix-ui/react-progress": "1.1.1",
     "@radix-ui/react-radio-group": "1.2.2",
     "@radix-ui/react-scroll-area": "1.2.2",
-    "@radix-ui/react-select": "^2.1.4",
+    "@radix-ui/react-select": "2.1.4",
     "@radix-ui/react-separator": "1.1.1",
     "@radix-ui/react-slider": "1.2.2",
     "@radix-ui/react-slot": "1.1.1",
@@ -43,16 +42,16 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
-    "date-fns": "latest",
+    "date-fns": "^2.30.0",
     "dotenv": "^17.0.1",
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "15.2.4",
+    "next": "^14.2.30",
     "next-themes": "^0.4.4",
-    "react": "^19",
-    "react-day-picker": "latest",
-    "react-dom": "^19",
+    "react": "18.2.0",
+    "react-day-picker": "^8.7.3",
+    "react-dom": "18.2.0",
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
@@ -63,27 +62,11 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^22",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "postcss": "^8.5",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5"
-  },
-  "main": "index.js",
-  "directories": {
-    "lib": "lib"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/youneselaoufy/Loka.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/youneselaoufy/Loka/issues"
-  },
-  "homepage": "https://github.com/youneselaoufy/Loka#readme",
-  "description": ""
+    "@types/node": "^18.17.19",
+    "@types/react": "^18.2.26",
+    "@types/react-dom": "^18.2.10",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.0"
+  }
 }

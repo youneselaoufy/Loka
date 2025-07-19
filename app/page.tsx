@@ -18,7 +18,7 @@ export default function HomePage() {
       if (value !== "") params.append(key, value as string)
     }
 
-    const res = await fetch(`http://localhost:4000/api/listings?${params.toString()}`)
+    const res = await fetch(`/api/listings?${params.toString()}`)
     const data = await res.json()
     setListings(data)
   }

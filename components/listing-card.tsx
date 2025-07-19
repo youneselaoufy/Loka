@@ -11,7 +11,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
   const imageSrc = listing.imageUrl?.startsWith("http")
     ? listing.imageUrl
     : listing.imageUrl
-    ? `http://localhost:4000${listing.imageUrl}`
+    ? `https://loka.youneselaoufy.com${listing.imageUrl}`
     : fallbackImage
 
   return (
@@ -69,3 +69,4 @@ export default function ListingCard({ listing }: { listing: Listing }) {
     </Card>
   )
 }
+

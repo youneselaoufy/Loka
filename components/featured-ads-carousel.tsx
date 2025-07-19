@@ -11,7 +11,7 @@ export default function FeaturedAdsCarousel() {
   useEffect(() => {
     const fetchFeatured = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/featured-listings")
+        const res = await fetch("/api/featured-listings")
         const data = await res.json()
         setFeaturedListings(data)
       } catch (err) {
