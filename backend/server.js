@@ -14,7 +14,6 @@ const PORT = process.env.PORT || 4000;
 
 console.log("✅ JWT_SECRET utilisé :", process.env.JWT_SECRET);
 
-// ✅ Autoriser plusieurs origines
 const allowedOrigins = [
   "http://localhost:3000",
   "https://loka.youneselaoufy.com"
@@ -23,7 +22,6 @@ const allowedOrigins = [
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
-// ✅ Vérification du token
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
@@ -41,11 +39,9 @@ function verifyToken(req, res, next) {
   }
 }
 
-// ✅ Connexion à la base
 const dbPath = path.resolve(__dirname, "db.sqlite");
 const db = new sqlite3.Database(dbPath);
 
-// ✅ Upload
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, "uploads/"),
   filename: (_, file, cb) => {
@@ -57,8 +53,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 app.use("/uploads", express.static("uploads"));
 
-// ================= ROUTES =================
-
 app.get("/", (req, res) => res.send("Loka backend is running."));
 
 app.get("/api/listings", (req, res) => {
@@ -66,26 +60,11 @@ app.get("/api/listings", (req, res) => {
   let query = "SELECT * FROM listings WHERE 1=1";
   const params = [];
 
-  if (title) {
-    query += " AND title LIKE ?";
-    params.push(`%${title}%`);
-  }
-  if (location) {
-    query += " AND location LIKE ?";
-    params.push(`%${location}%`);
-  }
-  if (category && category !== "all") {
-    query += " AND category = ?";
-    params.push(category);
-  }
-  if (minPrice) {
-    query += " AND pricePerDay >= ?";
-    params.push(Number(minPrice));
-  }
-  if (maxPrice) {
-    query += " AND pricePerDay <= ?";
-    params.push(Number(maxPrice));
-  }
+  if (title) query += " AND title LIKE ?", params.push(`%${title}%`);
+  if (location) query += " AND location LIKE ?", params.push(`%${location}%`);
+  if (category && category !== "all") query += " AND category = ?", params.push(category);
+  if (minPrice) query += " AND pricePerDay >= ?", params.push(Number(minPrice));
+  if (maxPrice) query += " AND pricePerDay <= ?", params.push(Number(maxPrice));
 
   db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -137,8 +116,6 @@ app.get("/api/user/listings", verifyToken, (req, res) => {
     res.json(rows);
   });
 });
-
-// ================= AUTH =================
 
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
@@ -204,9 +181,9 @@ app.post("/api/rentals", verifyToken, (req, res) => {
 app.get("/api/rentals", verifyToken, (req, res) => {
   const userId = req.user.id;
   db.all(
-    `SELECT rentals.*, listings.title, listings.imageUrl, listings.pricePerDay 
-     FROM rentals 
-     JOIN listings ON rentals.listingId = listings.id 
+    `SELECT rentals.*, listings.title, listings.imageUrl, listings.pricePerDay
+     FROM rentals
+     JOIN listings ON rentals.listingId = listings.id
      WHERE rentals.userId = ?`,
     [userId],
     (err, rows) => {
@@ -215,8 +192,6 @@ app.get("/api/rentals", verifyToken, (req, res) => {
     }
   );
 });
-
-// ================= DÉMARRAGE =================
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on port :${PORT}`);
