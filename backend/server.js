@@ -1,5 +1,5 @@
-console.log("��� [ACTIF] Ceci est le BON server.js exécuté !");
-require("dotenv").config({ override: false }); // ✅ À garder en haut
+console.log("🟢 [ACTIF] Ceci est le BON server.js exécuté !");
+require("dotenv").config({ override: false });
 
 const express = require("express");
 const cors = require("cors");
@@ -11,22 +11,16 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const SECRET = process.env.JWT_SECRET;
 
-// ✅ Debug token secret
-console.log("✅ JWT_SECRET utilisé :", SECRET);
+console.log("✅ JWT_SECRET utilisé :", process.env.JWT_SECRET);
 
-// ✅ Autoriser plusieurs origines (localhost + domaine prod)
+// ✅ Autoriser plusieurs origines
 const allowedOrigins = [
   "http://localhost:3000",
   "https://loka.youneselaoufy.com"
 ];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
-
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
 // ✅ Vérification du token
@@ -38,7 +32,7 @@ function verifyToken(req, res, next) {
 
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -51,7 +45,7 @@ function verifyToken(req, res, next) {
 const dbPath = path.resolve(__dirname, "db.sqlite");
 const db = new sqlite3.Database(dbPath);
 
-// ✅ Upload images
+// ✅ Upload
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, "uploads/"),
   filename: (_, file, cb) => {
@@ -67,7 +61,6 @@ app.use("/uploads", express.static("uploads"));
 
 app.get("/", (req, res) => res.send("Loka backend is running."));
 
-// 🔍 Filtrage dynamique
 app.get("/api/listings", (req, res) => {
   const { title, location, category, minPrice, maxPrice } = req.query;
   let query = "SELECT * FROM listings WHERE 1=1";
@@ -100,7 +93,6 @@ app.get("/api/listings", (req, res) => {
   });
 });
 
-// ⭐ Sélection vedette
 app.get("/api/featured-listings", (req, res) => {
   db.all("SELECT * FROM listings WHERE isFeatured = 1 LIMIT 3", (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -108,7 +100,6 @@ app.get("/api/featured-listings", (req, res) => {
   });
 });
 
-// ➕ Créer une annonce
 app.post("/api/listings", upload.single("image"), (req, res) => {
   const { title, pricePerDay, location, availability, category, userEmail } = req.body;
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
@@ -130,7 +121,6 @@ app.post("/api/listings", upload.single("image"), (req, res) => {
   );
 });
 
-// 🔍 Obtenir une annonce
 app.get("/api/listings/:id", (req, res) => {
   const { id } = req.params;
   db.get("SELECT * FROM listings WHERE id = ?", [id], (err, row) => {
@@ -140,7 +130,6 @@ app.get("/api/listings/:id", (req, res) => {
   });
 });
 
-// 🔍 Annonces par utilisateur
 app.get("/api/user/listings", verifyToken, (req, res) => {
   const email = req.user.email;
   db.all("SELECT * FROM listings WHERE userEmail = ?", [email], (err, rows) => {
@@ -181,17 +170,19 @@ app.post("/api/login", (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: "Mot de passe incorrect." });
 
-console.log("DEBUG SIGN TOKEN SECRET:", SECRET)
-console.log("DEBUG SIGN TOKEN typeof SECRET:", typeof SECRET)
-    const token = jwt.sign({ id: user.id, name: user.name, email: user.email }, SECRET, {
-      expiresIn: "7d",
-    });
+    console.log("🟡 DEBUG SIGN TOKEN SECRET:", process.env.JWT_SECRET);
+    console.log("🟡 typeof JWT_SECRET:", typeof process.env.JWT_SECRET);
+
+    const token = jwt.sign(
+      { id: user.id, name: user.name, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.json({ message: "Connexion réussie", token, user: { name: user.name, email: user.email } });
   });
 });
 
-// 📦 Louer une annonce
 app.post("/api/rentals", verifyToken, (req, res) => {
   const rentalId = Date.now().toString();
   const userId = req.user.id;
@@ -210,7 +201,6 @@ app.post("/api/rentals", verifyToken, (req, res) => {
   );
 });
 
-// 📦 Voir les locations
 app.get("/api/rentals", verifyToken, (req, res) => {
   const userId = req.user.id;
   db.all(
