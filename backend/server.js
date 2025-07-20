@@ -1,14 +1,15 @@
 /* -----------------------------------------------------------
-   Loka – backend/server.js  (version corrigée)
+   Loka – backend/server.js  (2025-07-20 : sans CREATE TABLE)
 ----------------------------------------------------------- */
 console.log("🟢 [ACTIF] Ceci est le BON server.js exécuté !");
 
 require("dotenv").config({ override: false });
 
+const fs       = require("fs");
+const path     = require("path");
 const express  = require("express");
 const cors     = require("cors");
 const sqlite3  = require("sqlite3").verbose();
-const path     = require("path");
 const multer   = require("multer");
 const bcrypt   = require("bcrypt");
 const jwt      = require("jsonwebtoken");
@@ -19,211 +20,168 @@ const PORT = process.env.PORT || 4000;
 /* ---------- Sécurité : secret JWT obligatoire ---------- */
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET) {
-  console.error("❌ ERREUR : JWT_SECRET est manquant dans les variables d'environnement !");
+  console.error("❌ ERREUR : la variable d’environnement JWT_SECRET est absente.");
   process.exit(1);
 }
 console.log("✅ JWT_SECRET initialisé :", SECRET);
 
+/* ---------- Dossier uploads ---------- */
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log("📂 Dossier uploads créé :", uploadDir);
+}
+
+/* ---------- Multer ---------- */
+const storage = multer.diskStorage({
+  destination: (_, __, cb) => cb(null, uploadDir),
+  filename   : (_, file, cb) => {
+    const ext  = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+const upload = multer({ storage });
+
 /* ---------- CORS ---------- */
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://loka.youneselaoufy.com"
+  "https://loka.youneselaoufy.com",
 ];
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-
-/* ---------- Body parsing ---------- */
 app.use(express.json());
+app.use("/uploads", express.static(uploadDir));
 
-/* ---------- Vérification de JWT ---------- */
-function verifyToken(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Accès non autorisé" });
+/* ---------- SQLite (schéma déjà seedé) ---------- */
+const dbPath = path.join(__dirname, "db.sqlite");
+const db = new sqlite3.Database(dbPath, err => {
+  if (err) {
+    console.error("❌ Impossible d’ouvrir la base :", err.message);
+    process.exit(1);
   }
-  const token = authHeader.split(" ")[1];
+  db.run("PRAGMA foreign_keys = ON");
+  console.log("🗄️  Base SQLite ouverte – schéma supposé déjà présent.");
+});
+
+/* ---------- Middleware JWT ---------- */
+function verifyToken(req, res, next) {
+  const token = (req.headers.authorization || "").replace(/^Bearer /, "");
+  if (!token) return res.status(401).json({ error: "Accès non autorisé" });
   try {
     req.user = jwt.verify(token, SECRET);
     next();
-  } catch (err) {
-    console.error("❌ Token invalide :", err.message);
-    res.status(403).json({ error: "Token invalide" });
+  } catch (e) {
+    return res.status(403).json({ error: "Token invalide" });
   }
 }
 
-/* ---------- Base SQLite ---------- */
-const dbPath = path.resolve(__dirname, "db.sqlite");
-const db     = new sqlite3.Database(dbPath);
+/* =========================================================
+   ROUTES (identiques)
+========================================================= */
 
-/* ---------- Upload d’images ---------- */
-const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, "uploads/"),
-  filename   : (_, file, cb) => {
-    const ext  = path.extname(file.originalname);
-    const name = `${Date.now()}-${Math.floor(Math.random() * 1e9)}${ext}`;
-    cb(null, name);
-  }
-});
-const upload = multer({ storage });
-app.use("/uploads", express.static("uploads"));
-
-/* =======================================================
-   ROUTES
-======================================================= */
-
-/* --- Alive check --- */
 app.get("/", (_, res) => res.send("Loka backend is running."));
 
-/* -------- LISTINGS -------- */
-
-/* GET /api/listings */
+/* ---------- LISTINGS ---------- */
 app.get("/api/listings", (req, res) => {
   const { title, location, category, minPrice, maxPrice } = req.query;
-
-  const filters = [];
-  const params  = [];
-
-  if (title)               { filters.push("title LIKE ?");         params.push(`%${title}%`); }
-  if (location)            { filters.push("location LIKE ?");      params.push(`%${location}%`); }
+  const clauses = [], params = [];
+  if (title)    { clauses.push("title LIKE ?");         params.push(`%${title}%`); }
+  if (location) { clauses.push("location LIKE ?");      params.push(`%${location}%`); }
   if (category && category !== "all") {
-                           filters.push("category = ?");           params.push(category);       }
-  if (minPrice)            { filters.push("pricePerDay >= ?");     params.push(Number(minPrice)); }
-  if (maxPrice)            { filters.push("pricePerDay <= ?");     params.push(Number(maxPrice)); }
-
-  let query = "SELECT * FROM listings";
-  if (filters.length) {
-    query += " WHERE " + filters.join(" AND ");
-  }
-
-  db.all(query, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+                clauses.push("category = ?");           params.push(category); }
+  if (minPrice) { clauses.push("pricePerDay >= ?");     params.push(+minPrice); }
+  if (maxPrice) { clauses.push("pricePerDay <= ?");     params.push(+maxPrice); }
+  const sql = `SELECT * FROM listings${clauses.length ? " WHERE " + clauses.join(" AND ") : ""}`;
+  db.all(sql, params, (err, rows) =>
+    err ? res.status(500).json({ error: err.message }) : res.json(rows)
+  );
 });
 
-/* GET /api/featured-listings */
 app.get("/api/featured-listings", (_, res) => {
-  db.all("SELECT * FROM listings WHERE isFeatured = 1 LIMIT 3", (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  db.all("SELECT * FROM listings WHERE isFeatured = 1 LIMIT 3",
+         (err, rows) => err ? res.status(500).json({ error: err.message }) : res.json(rows));
 });
 
-/* POST /api/listings */
 app.post("/api/listings", upload.single("image"), (req, res) => {
   const { title, pricePerDay, location, availability, category, userEmail } = req.body;
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
   if (!title || !pricePerDay || !location || !availability || !category || !userEmail) {
     return res.status(400).json({ error: "Tous les champs requis ne sont pas remplis." });
   }
-
   const id = Date.now().toString();
-  db.run(
-    `INSERT INTO listings (id, title, pricePerDay, location, availability, imageUrl, category, userEmail)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, title, pricePerDay, location, availability, imageUrl, category, userEmail],
-    err => {
-      if (err) return res.status(500).json({ error: "Erreur lors de l'insertion." });
-      res.status(201).json({ message: "Annonce ajoutée avec succès", id });
-    }
-  );
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+  db.run(`INSERT INTO listings
+          (id, title, pricePerDay, location, availability, imageUrl, category, userEmail)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         [id, title, +pricePerDay, location, availability, imageUrl, category, userEmail],
+         err => err
+           ? res.status(500).json({ error: err.message })
+           : res.status(201).json({ message: "Annonce ajoutée", id }));
 });
 
-/* GET /api/listings/:id */
 app.get("/api/listings/:id", (req, res) => {
-  db.get("SELECT * FROM listings WHERE id = ?", [req.params.id], (err, row) => {
-    if (err)   return res.status(500).json({ error: "Erreur serveur." });
-    if (!row)  return res.status(404).json({ error: "Annonce introuvable." });
-    res.json(row);
-  });
+  db.get("SELECT * FROM listings WHERE id = ?", [req.params.id],
+         (err, row) => err
+           ? res.status(500).json({ error: err.message })
+           : row
+             ? res.json(row)
+             : res.status(404).json({ error: "Annonce introuvable" }));
 });
 
-/* GET /api/user/listings */
 app.get("/api/user/listings", verifyToken, (req, res) => {
-  db.all("SELECT * FROM listings WHERE userEmail = ?", [req.user.email], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  db.all("SELECT * FROM listings WHERE userEmail = ?",
+         [req.user.email],
+         (err, rows) => err ? res.status(500).json({ error: err.message }) : res.json(rows));
 });
 
-/* -------- AUTH -------- */
-
-/* POST /api/register */
+/* ---------- AUTH ---------- */
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
-  if (!name || !email || !password) return res.status(400).json({ error: "Champs requis manquants." });
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const id = Date.now().toString();
-
-  db.run(
-    "INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)",
-    [id, name, email, hashedPassword],
-    err => {
-      if (err?.message.includes("UNIQUE")) return res.status(409).json({ error: "Email déjà utilisé." });
-      if (err) return res.status(500).json({ error: "Erreur serveur." });
-      res.status(201).json({ message: "Utilisateur enregistré avec succès." });
-    }
-  );
+  if (!name || !email || !password)
+    return res.status(400).json({ error: "Champs requis manquants." });
+  const hashed = await bcrypt.hash(password, 10);
+  db.run("INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)",
+         [Date.now().toString(), name, email, hashed],
+         err => err
+           ? err.message.includes("UNIQUE")
+             ? res.status(409).json({ error: "Email déjà utilisé." })
+             : res.status(500).json({ error: err.message })
+           : res.status(201).json({ message: "Utilisateur enregistré." }));
 });
 
-/* POST /api/login */
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
-    if (err) return res.status(500).json({ error: "Erreur serveur." });
+    if (err)   return res.status(500).json({ error: err.message });
     if (!user) return res.status(401).json({ error: "Utilisateur introuvable." });
-
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: "Mot de passe incorrect." });
-
-    const token = jwt.sign(
-      { id: user.id, name: user.name, email: user.email },
-      SECRET,
-      { expiresIn: "7d" }
-    );
-    res.json({ message: "Connexion réussie", token, user: { name: user.name, email: user.email } });
+    if (!(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: "Mot de passe incorrect." });
+    }
+    const token = jwt.sign({ id: user.id, name: user.name, email: user.email },
+                           SECRET, { expiresIn: "7d" });
+    res.json({ message: "Connexion réussie", token,
+               user: { name: user.name, email: user.email } });
   });
 });
 
-/* -------- RENTALS -------- */
-
-/* POST /api/rentals */
+/* ---------- RENTALS ---------- */
 app.post("/api/rentals", verifyToken, (req, res) => {
   const { listingId } = req.body;
   if (!listingId) return res.status(400).json({ error: "ID de l'annonce requis" });
-
-  const rentalId   = Date.now().toString();
-  const rentalDate = new Date().toISOString();
-
-  db.run(
-    "INSERT INTO rentals (id, userId, listingId, rentalDate) VALUES (?, ?, ?, ?)",
-    [rentalId, req.user.id, listingId, rentalDate],
-    err => {
-      if (err) return res.status(500).json({ error: "Erreur lors de la location." });
-      res.status(201).json({ message: "Annonce louée avec succès", rentalId });
-    }
-  );
+  db.run("INSERT INTO rentals (id, userId, listingId, rentalDate) VALUES (?, ?, ?, ?)",
+         [Date.now().toString(), req.user.id, listingId, new Date().toISOString()],
+         err => err
+           ? res.status(500).json({ error: err.message })
+           : res.status(201).json({ message: "Location confirmée" }));
 });
 
-/* GET /api/rentals */
 app.get("/api/rentals", verifyToken, (req, res) => {
-  db.all(
-    `SELECT rentals.*, listings.title, listings.imageUrl, listings.pricePerDay
-     FROM rentals
-     JOIN listings ON rentals.listingId = listings.id
-     WHERE rentals.userId = ?`,
-    [req.user.id],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: "Erreur serveur" });
-      res.json(rows);
-    }
-  );
+  const sql = `SELECT rentals.*, listings.title, listings.imageUrl, listings.pricePerDay
+               FROM rentals JOIN listings ON rentals.listingId = listings.id
+               WHERE rentals.userId = ?`;
+  db.all(sql, [req.user.id],
+         (err, rows) => err ? res.status(500).json({ error: err.message }) : res.json(rows));
 });
 
-/* =======================================================
-   Lancement du serveur
-======================================================= */
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port :${PORT}`);
-});
+/* ---------- Lancement ---------- */
+app.listen(PORT, () =>
+  console.log(`✅ Backend prêt sur http://localhost:${PORT}`)
+);
