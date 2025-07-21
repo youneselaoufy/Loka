@@ -1,4 +1,5 @@
-import { notFound, headers } from "next/navigation"
+import { notFound } from "next/navigation"
+import { headers } from "next/headers"
 import AnnonceDetail from "@/components/annonce-detail"
 
 interface Listing {
@@ -14,30 +15,21 @@ interface Listing {
   ownerName?: string
 }
 
-type PageProps = {
-  params: { id: string }
-}
+type PageProps = { params: { id: string } }
 
-/**
- * Récupère une annonce depuis le backend.
- * – En Server Component, `fetch("/api/…")` ne passe PAS par `nextConfig.rewrites()`.
- * – On construit donc l’URL absolue à partir de l’en-tête Host (ou d’une env si dispo).
- */
 async function getListing(id: string): Promise<Listing | null> {
-  // 1) si vous avez défini NEXT_INTERNAL_API_ORIGIN, on l’utilise
+  /* URL absolue de l’API */
   const origin =
     process.env.NEXT_INTERNAL_API_ORIGIN ||
-    (() => {
-      // 2) sinon on reconstruit à partir du Host reçu par le serveur
-      const host = headers().get("host") || "loka.youneselaoufy.com"
-      // http pour localhost, sinon https
+    (async () => {
+      const hdr = await headers()              // ⬅️ 1) attendre la promesse
+      const host = hdr.get("host") ?? "loka.youneselaoufy.com"
       const protocol = host.startsWith("localhost") ? "http" : "https"
       return `${protocol}://${host}`
     })()
 
   try {
-    const res = await fetch(`${origin}/api/listings/${id}`, {
-      // on ne garde pas de cache pour toujours avoir la version la plus récente
+    const res = await fetch(`${await origin}/api/listings/${id}`, {
       cache: "no-store",
     })
     if (!res.ok) return null
@@ -50,6 +42,5 @@ async function getListing(id: string): Promise<Listing | null> {
 export default async function AnnoncePage({ params }: PageProps) {
   const listing = await getListing(params.id)
   if (!listing) return notFound()
-
   return <AnnonceDetail listing={listing} />
 }
